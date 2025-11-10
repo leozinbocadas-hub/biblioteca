@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  
+  <!-- Viewport otimizado para PWA -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#7F4EF0" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="/manifest.json" />
+  
+  <!-- Apple Specific (iOS) -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Biblioteca Mística" />
+  <link rel="apple-touch-icon" href="/eye-icon.png" />
+  
+  <!-- Description & SEO -->
+  <meta name="description" content="Sua biblioteca pessoal de conhecimento místico" />
+  <meta name="keywords" content="esoterismo, ocultismo, magia, grimórios, tarot, astrologia, wicca" />
+  
+  <!-- Social Meta Tags -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Biblioteca Mística - Área de Membros" />
+  <meta property="og:description" content="Acesso exclusivo aos mistérios do conhecimento esotérico e espiritual" />
+  <meta property="og:image" content="https://biblioteca.produtohub.store/eye-icon.png" />
+  
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Biblioteca Mística - Área de Membros" />
+  <meta name="twitter:description" content="Acesso exclusivo aos mistérios do conhecimento esotérico e espiritual" />
+  <meta name="twitter:image" content="https://biblioteca.produtohub.store/eye-icon.png" />
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/eye-icon.png" />
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+  
+  <!-- Title -->
+  <title>Biblioteca Mística - Conhecimento Esotérico</title>
+  
+  <!-- Preload critical resources -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  
+  <style>
+    /* Loading inicial - prevenir flash de tela branca */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0A0A0A;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    #root {
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Loading spinner inicial */
+    .app-loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0A0A0A 0%, #1A1A1A 100%);
+      z-index: 9999;
+    }
+    
+    .app-loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #8B5CF6;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+    
+    .app-loading-text {
+      color: #8B5CF6;
+      font-size: 16px;
+      font-weight: 500;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading inicial -->
+  <div class="app-loading" id="app-loading">
+    <div class="app-loading-spinner"></div>
+    <div class="app-loading-text">Carregando Biblioteca Mística...</div>
+  </div>
+  
+  <!-- App root -->
+  <div id="root"></div>
+  
+  <!-- Main script -->
+  <script type="module" src="/src/main.tsx"></script>
+  
+  <!-- Remover loading quando app carregar -->
+  <script>
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const loading = document.getElementById('app-loading');
+        if (loading) {
+          loading.style.opacity = '0';
+          loading.style.transition = 'opacity 0.3s';
+          setTimeout(() => loading.remove(), 300);
+        }
+      }, 500);
+    });
+  </script>
+</body>
+</html>
