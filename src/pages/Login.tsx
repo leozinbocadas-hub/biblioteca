@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { setUser } = useAuth();
@@ -21,31 +22,83 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // Login existente
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('email', email.trim())
-        .eq('password_hash', password) // Plain text comparison
-        .eq('is_active', true)
-        .single();
+      if (isRegistering) {
+        // Registro temporário
+        const trimmedEmail = email.trim();
 
-      if (error || !data) {
+        // Verificar se email já existe
+        const { data: existing, error: existingError } = await supabase
+          .from('usuarios')
+          .select('id')
+          .eq('email', trimmedEmail)
+          .limit(1);
+
+        if (existingError) {
+          throw existingError;
+        }
+
+        if (Array.isArray(existing) && existing.length > 0) {
+          toast({
+            title: 'Email já registrado',
+            description: 'Use outro email ou faça login.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        const { data: newUser, error: insertError } = await supabase
+          .from('usuarios')
+          .insert({
+            email: trimmedEmail,
+            password_hash: password, // seguindo padrão atual (texto simples)
+            is_active: true,
+            purchase_date: new Date().toISOString(),
+          })
+          .select('*')
+          .single();
+
+        if (insertError || !newUser) {
+          toast({
+            title: 'Erro ao registrar',
+            description: insertError?.message || 'Tente novamente mais tarde.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        setUser(newUser);
         toast({
-          title: 'Erro ao fazer login',
-          description: 'Email ou senha inválidos',
-          variant: 'destructive',
+          title: 'Conta criada!',
+          description: 'Registro temporário habilitado com sucesso.',
         });
-        return;
-      }
+        navigate('/dashboard');
+      } else {
+        // Login existente
+        const { data, error } = await supabase
+          .from('usuarios')
+          .select('*')
+          .eq('email', email.trim())
+          .eq('password_hash', password) // Plain text comparison
+          .eq('is_active', true)
+          .single();
 
-      // Success - save user and redirect
-      setUser(data);
-      toast({
-        title: 'Login realizado!',
-        description: 'Bem-vindo à Biblioteca Mística',
-      });
-      navigate('/dashboard');
+        if (error || !data) {
+          toast({
+            title: 'Erro ao fazer login',
+            description: 'Email ou senha inválidos',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // Sucesso - salvar usuário e redirecionar
+        setUser(data);
+        toast({
+          title: 'Login realizado!',
+          description: 'Bem-vindo à Biblioteca Mística',
+        });
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Error:', error);
       toast({
@@ -94,8 +147,34 @@ const Login = () => {
               Biblioteca Mística
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
-              Entre na sua área de membros
+              {isRegistering ? 'Crie sua conta (registro temporário)' : 'Entre na sua área de membros'}
             </p>
+          </div>
+
+          {/* Toggle Entrar/Registrar */}
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <button
+              type="button"
+              onClick={() => setIsRegistering(false)}
+              className={`px-3 py-2 rounded-md text-sm font-medium border transition-colors ${
+                !isRegistering
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-transparent text-foreground border-border hover:bg-accent'
+              }`}
+            >
+              Entrar
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsRegistering(true)}
+              className={`px-3 py-2 rounded-md text-sm font-medium border transition-colors ${
+                isRegistering
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-transparent text-foreground border-border hover:bg-accent'
+              }`}
+            >
+              Registrar
+            </button>
           </div>
 
           {/* Form */}
@@ -137,9 +216,16 @@ const Login = () => {
               className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity text-primary-foreground font-semibold h-11"
               disabled={isLoading}
             >
-              {isLoading ? 'Entrando...' : 'Entrar'}
+              {isLoading ? (isRegistering ? 'Registrando...' : 'Entrando...') : (isRegistering ? 'Registrar' : 'Entrar')}
             </Button>
           </form>
+
+          {isRegistering && (
+            <p className="text-xs text-center mt-4 text-yellow-500 flex items-center justify-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Aviso: Registro aberto por tempo limitado.
+            </p>
+          )}
 
           <p className="text-xs text-center text-muted-foreground mt-6">
             Acesso exclusivo para membros da Biblioteca Mística
