@@ -27,9 +27,11 @@ const RoboOculto = () => {
   const navigate = useNavigate();
   
   // Carregar histórico salvo ou usar mensagem inicial
+  const getHistoricoKey = () => `${HISTORICO_KEY}:${user?.id || user?.email || 'anonimo'}`;
+
   const carregarHistorico = (): Mensagem[] => {
     try {
-      const historicoSalvo = localStorage.getItem(HISTORICO_KEY);
+      const historicoSalvo = localStorage.getItem(getHistoricoKey());
       if (!historicoSalvo) {
         return [
           {
@@ -48,7 +50,7 @@ const RoboOculto = () => {
 
       // Se passou mais de 48 horas, limpar e retornar mensagem inicial
       if (horasDecorridas >= HISTORICO_DURACAO_HORAS) {
-        localStorage.removeItem(HISTORICO_KEY);
+        localStorage.removeItem(getHistoricoKey());
         return [
           {
             id: '1',
@@ -90,7 +92,9 @@ const RoboOculto = () => {
         mensagens: msgs,
         timestamp: Date.now(),
       };
-      localStorage.setItem(HISTORICO_KEY, JSON.stringify(historico));
+      if (user) {
+        localStorage.setItem(getHistoricoKey(), JSON.stringify(historico));
+      }
     } catch (error) {
       console.error('Erro ao salvar histórico:', error);
     }
@@ -110,6 +114,12 @@ const RoboOculto = () => {
   useEffect(() => {
     salvarHistorico(mensagens);
   }, [mensagens]);
+
+  useEffect(() => {
+    if (user) {
+      setMensagens(carregarHistorico());
+    }
+  }, [user]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
