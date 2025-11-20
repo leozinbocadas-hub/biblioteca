@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { BottomNav } from '@/components/BottomNav';
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { EmojiPicker } from '@/components/EmojiPicker';
 
 type PostComAutor = PostComunidade & {
   usuario: {
@@ -48,6 +49,8 @@ const Comunidade = () => {
     open: false,
     postId: null,
   });
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const comentarioRefs = useRef<Record<string, HTMLInputElement>>({});
 
   useEffect(() => {
     if (!user) {
@@ -545,6 +548,7 @@ const Comunidade = () => {
                 
                 <div className="flex-1 min-w-0">
                   <textarea 
+                    ref={textareaRef}
                     value={conteudo}
                     onChange={e => setConteudo(e.target.value)}
                     placeholder="No que você está pensando?"
@@ -553,7 +557,26 @@ const Comunidade = () => {
                   />
                   
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mt-4">
-                    <ImageUpload onImageUploaded={setImagemUrl} />
+                    <div className="flex items-center gap-2">
+                      <EmojiPicker 
+                        onEmojiSelect={(emoji) => {
+                          const textarea = textareaRef.current;
+                          if (textarea) {
+                            const start = textarea.selectionStart;
+                            const end = textarea.selectionEnd;
+                            const newText = conteudo.substring(0, start) + emoji + conteudo.substring(end);
+                            setConteudo(newText);
+                            setTimeout(() => {
+                              textarea.focus();
+                              textarea.setSelectionRange(start + emoji.length, start + emoji.length);
+                            }, 0);
+                          } else {
+                            setConteudo(conteudo + emoji);
+                          }
+                        }}
+                      />
+                      <ImageUpload onImageUploaded={setImagemUrl} />
+                    </div>
                     
                     <button
                       onClick={criarPost}
@@ -685,26 +708,52 @@ const Comunidade = () => {
                     })}
 
                     {/* Adicionar Comentário */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-end">
                       <img
                         src={user?.foto_perfil_url || 'https://via.placeholder.com/32'}
                         alt="Você"
                         className="w-8 h-8 rounded-full"
                       />
-                      <Input
-                        placeholder="Escreva um comentário..."
-                        className="flex-1"
-                        value={novoComentario[post.id] || ''}
-                        onChange={(e) =>
-                          setNovoComentario(prev => ({ ...prev, [post.id]: e.target.value }))
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            adicionarComentario(post.id);
+                      <div className="flex-1 flex gap-2 items-end">
+                        <Input
+                          ref={(el) => {
+                            if (el) comentarioRefs.current[post.id] = el;
+                          }}
+                          placeholder="Escreva um comentário..."
+                          className="flex-1"
+                          value={novoComentario[post.id] || ''}
+                          onChange={(e) =>
+                            setNovoComentario(prev => ({ ...prev, [post.id]: e.target.value }))
                           }
-                        }}
-                      />
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              adicionarComentario(post.id);
+                            }
+                          }}
+                        />
+                        <EmojiPicker 
+                          onEmojiSelect={(emoji) => {
+                            const input = comentarioRefs.current[post.id];
+                            if (input) {
+                              const start = input.selectionStart || 0;
+                              const end = input.selectionEnd || 0;
+                              const currentValue = novoComentario[post.id] || '';
+                              const newText = currentValue.substring(0, start) + emoji + currentValue.substring(end);
+                              setNovoComentario(prev => ({ ...prev, [post.id]: newText }));
+                              setTimeout(() => {
+                                input.focus();
+                                input.setSelectionRange(start + emoji.length, start + emoji.length);
+                              }, 0);
+                            } else {
+                              setNovoComentario(prev => ({ 
+                                ...prev, 
+                                [post.id]: (prev[post.id] || '') + emoji 
+                              }));
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}

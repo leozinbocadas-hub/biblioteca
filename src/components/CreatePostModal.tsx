@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +8,8 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { useIsPublicador } from '@/hooks/useIsPublicador';
+import { EmojiPicker } from '@/components/EmojiPicker';
 
 interface CreatePostModalProps {
   open: boolean;
@@ -18,6 +20,7 @@ interface CreatePostModalProps {
 export const CreatePostModal = ({ open, onOpenChange, onPostCreated }: CreatePostModalProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isPublicador } = useIsPublicador();
   const [novoPost, setNovoPost] = useState({
     titulo: '',
     conteudo: '',
@@ -25,6 +28,8 @@ export const CreatePostModal = ({ open, onOpenChange, onPostCreated }: CreatePos
     imagem_url: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  const tituloRef = useRef<HTMLInputElement>(null);
+  const conteudoRef = useRef<HTMLTextAreaElement>(null);
 
   const criarPost = async () => {
     if (!user) return;
@@ -38,22 +43,25 @@ export const CreatePostModal = ({ open, onOpenChange, onPostCreated }: CreatePos
       return;
     }
 
-    if (novoPost.titulo.length > 100) {
-      toast({
-        title: 'Título muito longo',
-        description: 'O título deve ter no máximo 100 caracteres',
-        variant: 'destructive'
-      });
-      return;
-    }
+    // Publicadores não têm limite de caracteres
+    if (!isPublicador) {
+      if (novoPost.titulo.length > 100) {
+        toast({
+          title: 'Título muito longo',
+          description: 'O título deve ter no máximo 100 caracteres',
+          variant: 'destructive'
+        });
+        return;
+      }
 
-    if (novoPost.conteudo.length > 1000) {
-      toast({
-        title: 'Conteúdo muito longo',
-        description: 'O conteúdo deve ter no máximo 1000 caracteres',
-        variant: 'destructive'
-      });
-      return;
+      if (novoPost.conteudo.length > 1000) {
+        toast({
+          title: 'Conteúdo muito longo',
+          description: 'O conteúdo deve ter no máximo 1000 caracteres',
+          variant: 'destructive'
+        });
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -124,33 +132,75 @@ export const CreatePostModal = ({ open, onOpenChange, onPostCreated }: CreatePos
 
           <div>
             <label className="text-sm text-gray-400 mb-2 block">
-              Título <span className="text-xs text-gray-500">(max 100 caracteres)</span>
+              Título {!isPublicador && <span className="text-xs text-gray-500">(max 100 caracteres)</span>}
             </label>
-            <Input
-              value={novoPost.titulo}
-              onChange={(e) => setNovoPost({ ...novoPost, titulo: e.target.value })}
-              className="bg-[#0A0A0A] border-gray-700 text-white"
-              placeholder="Título do post"
-              maxLength={100}
-            />
+            <div className="flex gap-2 items-center">
+              <Input
+                ref={tituloRef}
+                value={novoPost.titulo}
+                onChange={(e) => setNovoPost({ ...novoPost, titulo: e.target.value })}
+                className="bg-[#0A0A0A] border-gray-700 text-white flex-1"
+                placeholder="Título do post"
+                maxLength={isPublicador ? undefined : 100}
+              />
+              <EmojiPicker 
+                onEmojiSelect={(emoji) => {
+                  const input = tituloRef.current;
+                  if (input) {
+                    const start = input.selectionStart || 0;
+                    const end = input.selectionEnd || 0;
+                    const newText = novoPost.titulo.substring(0, start) + emoji + novoPost.titulo.substring(end);
+                    setNovoPost({ ...novoPost, titulo: newText });
+                    setTimeout(() => {
+                      input.focus();
+                      input.setSelectionRange(start + emoji.length, start + emoji.length);
+                    }, 0);
+                  } else {
+                    setNovoPost({ ...novoPost, titulo: novoPost.titulo + emoji });
+                  }
+                }}
+              />
+            </div>
             <div className="text-xs text-gray-500 mt-1 text-right">
-              {novoPost.titulo.length}/100
+              {novoPost.titulo.length}{!isPublicador && '/100'}
             </div>
           </div>
 
           <div>
             <label className="text-sm text-gray-400 mb-2 block">
-              Conteúdo <span className="text-xs text-gray-500">(max 1000 caracteres)</span>
+              Conteúdo {!isPublicador && <span className="text-xs text-gray-500">(max 1000 caracteres)</span>}
             </label>
-            <Textarea
-              value={novoPost.conteudo}
-              onChange={(e) => setNovoPost({ ...novoPost, conteudo: e.target.value })}
-              className="bg-[#0A0A0A] border-gray-700 text-white min-h-[150px]"
-              placeholder="Conteúdo do post"
-              maxLength={1000}
-            />
+            <div className="relative">
+              <Textarea
+                ref={conteudoRef}
+                value={novoPost.conteudo}
+                onChange={(e) => setNovoPost({ ...novoPost, conteudo: e.target.value })}
+                className="bg-[#0A0A0A] border-gray-700 text-white min-h-[150px]"
+                placeholder="Conteúdo do post"
+                maxLength={isPublicador ? undefined : 1000}
+              />
+              <div className="absolute bottom-2 right-2">
+                <EmojiPicker 
+                  onEmojiSelect={(emoji) => {
+                    const textarea = conteudoRef.current;
+                    if (textarea) {
+                      const start = textarea.selectionStart || 0;
+                      const end = textarea.selectionEnd || 0;
+                      const newText = novoPost.conteudo.substring(0, start) + emoji + novoPost.conteudo.substring(end);
+                      setNovoPost({ ...novoPost, conteudo: newText });
+                      setTimeout(() => {
+                        textarea.focus();
+                        textarea.setSelectionRange(start + emoji.length, start + emoji.length);
+                      }, 0);
+                    } else {
+                      setNovoPost({ ...novoPost, conteudo: novoPost.conteudo + emoji });
+                    }
+                  }}
+                />
+              </div>
+            </div>
             <div className="text-xs text-gray-500 mt-1 text-right">
-              {novoPost.conteudo.length}/1000
+              {novoPost.conteudo.length}{!isPublicador && '/1000'}
             </div>
           </div>
 

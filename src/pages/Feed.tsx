@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { BottomNav } from '@/components/BottomNav';
@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Heart, MessageCircle, Loader2, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { EmojiPicker } from '@/components/EmojiPicker';
 
 type PostComAutor = PostFeed & {
   usuario: {
@@ -42,6 +43,7 @@ const Feed = () => {
     open: false,
     postId: null,
   });
+  const comentarioRefs = useRef<Record<string, HTMLInputElement>>({});
 
   useEffect(() => {
     if (!user) {
@@ -454,11 +456,14 @@ const Feed = () => {
                 </span>
 
                 {post.imagem_url && (
-                  <img
-                    src={post.imagem_url}
-                    alt={post.titulo}
-                    className="w-full h-48 object-cover rounded-lg mt-4 max-w-full"
-                  />
+                  <div className="w-full rounded-lg mt-4 overflow-hidden flex justify-center bg-[#0A0A0A]">
+                    <img
+                      src={post.imagem_url}
+                      alt={post.titulo}
+                      className="max-w-full h-auto rounded-lg object-contain max-h-[600px] sm:max-h-[700px] md:max-h-[800px]"
+                      style={{ maxHeight: '80vh' }}
+                    />
+                  </div>
                 )}
 
                 <h2 className="text-2xl font-bold text-foreground mt-4 overflow-hidden text-ellipsis line-clamp-2 break-words">
@@ -570,26 +575,52 @@ const Feed = () => {
                     })}
 
                     {/* Adicionar Comentário */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-end">
                       <img
                         src={user?.foto_perfil_url || 'https://via.placeholder.com/32'}
                         alt="Você"
                         className="w-8 h-8 rounded-full"
                       />
-                      <Input
-                        placeholder="Escreva um comentário..."
-                        className="flex-1"
-                        value={novoComentario[post.id] || ''}
-                        onChange={(e) =>
-                          setNovoComentario(prev => ({ ...prev, [post.id]: e.target.value }))
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            adicionarComentario(post.id);
+                      <div className="flex-1 flex gap-2 items-end">
+                        <Input
+                          ref={(el) => {
+                            if (el) comentarioRefs.current[post.id] = el;
+                          }}
+                          placeholder="Escreva um comentário..."
+                          className="flex-1"
+                          value={novoComentario[post.id] || ''}
+                          onChange={(e) =>
+                            setNovoComentario(prev => ({ ...prev, [post.id]: e.target.value }))
                           }
-                        }}
-                      />
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              adicionarComentario(post.id);
+                            }
+                          }}
+                        />
+                        <EmojiPicker 
+                          onEmojiSelect={(emoji) => {
+                            const input = comentarioRefs.current[post.id];
+                            if (input) {
+                              const start = input.selectionStart || 0;
+                              const end = input.selectionEnd || 0;
+                              const currentValue = novoComentario[post.id] || '';
+                              const newText = currentValue.substring(0, start) + emoji + currentValue.substring(end);
+                              setNovoComentario(prev => ({ ...prev, [post.id]: newText }));
+                              setTimeout(() => {
+                                input.focus();
+                                input.setSelectionRange(start + emoji.length, start + emoji.length);
+                              }, 0);
+                            } else {
+                              setNovoComentario(prev => ({ 
+                                ...prev, 
+                                [post.id]: (prev[post.id] || '') + emoji 
+                              }));
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
